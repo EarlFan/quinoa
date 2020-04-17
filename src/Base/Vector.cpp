@@ -42,6 +42,21 @@ tk::cross( const std::array< real, 3 >& v1, const std::array< real, 3 >& v2 )
             v1[0]*v2[1] - v2[0]*v1[1] }};
 }
 
+void
+tk::cross( const std::array< real, 3 >& v1, const std::array< real, 3 >& v2,
+           std::array< tk::real, 3 > & res )
+// *****************************************************************************
+//  Compute the cross-product of two vectors
+//! \param[in] v1 1st vector
+//! \param[in] v2 2nd vector
+//! \return Cross-product
+// *****************************************************************************
+{
+  res[0] = v1[1]*v2[2] - v2[1]*v1[2];
+  res[1] = v1[2]*v2[0] - v2[2]*v1[0];
+  res[2] = v1[0]*v2[1] - v2[0]*v1[1];
+}
+
 std::array< tk::real, 3 >
 tk::crossdiv( const std::array< real, 3 >& v1,
               const std::array< real, 3 >& v2,
@@ -100,7 +115,7 @@ tk::unit( std::array< real, 3 >& v )
 tk::real
 tk::triple( const std::array< real, 3 >& v1,
             const std::array< real, 3 >& v2,
-            const std::array< real, 3 >& v3 )
+            const std::array< real, 3 >& v3 ) noexcept
 // *****************************************************************************
 //  Compute the triple-product of three vectors
 //! \param[in] v1 1st vector
@@ -109,7 +124,9 @@ tk::triple( const std::array< real, 3 >& v1,
 //! \return Triple-product
 // *****************************************************************************
 {
-  return dot( v1, cross(v2,v3) );
+  std::array< tk::real, 3 > res;
+  cross(v2,v3, res);
+  return dot( v1, res );
 }
 
 std::array< tk::real, 3 >

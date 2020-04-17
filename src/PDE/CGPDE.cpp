@@ -11,6 +11,7 @@
 // *****************************************************************************
 
 #include <array>
+#include <iostream>
 #include <vector>
 #include <unordered_map>
 
@@ -94,31 +95,33 @@ new_egrad( ncomp_t ncomp,
        temp_type & res
        )
 {
-
   // access node cooordinates
   const auto& x = coord[0];
   const auto& y = coord[1];
   const auto& z = coord[2];
   // access node IDs
-  const std::array< std::size_t, 4 >
-    N{{ inpoel[e*4+0], inpoel[e*4+1], inpoel[e*4+2], inpoel[e*4+3] }};
+  auto & N = std::get<0>(res);
+  N = { inpoel[e*4+0], inpoel[e*4+1], inpoel[e*4+2], inpoel[e*4+3] };
   // compute element Jacobi determinant
   const std::array< tk::real, 3 >
     ba{{ x[N[1]]-x[N[0]], y[N[1]]-y[N[0]], z[N[1]]-z[N[0]] }},
     ca{{ x[N[2]]-x[N[0]], y[N[2]]-y[N[0]], z[N[2]]-z[N[0]] }},
     da{{ x[N[3]]-x[N[0]], y[N[3]]-y[N[0]], z[N[3]]-z[N[0]] }};
-  const auto J = tk::triple( ba, ca, da );        // J = 6V
+  auto & J = std::get<3>(res);
+  J = tk::triple( ba, ca, da );        // J = 6V
   Assert( J > 0, "Element Jacobian non-positive" );
   // shape function derivatives, nnode*ndim [4][3]
-  std::array< std::array< tk::real, 3 >, 4 > grad;
+  auto & grad = std::get<1>(res);
   grad[1] = tk::crossdiv( ca, da, J );
   grad[2] = tk::crossdiv( da, ba, J );
   grad[3] = tk::crossdiv( ba, ca, J );
   for (std::size_t i=0; i<3; ++i)
     grad[0][i] = -grad[1][i]-grad[2][i]-grad[3][i];
   // access solution at element nodes
-  std::vector< std::array< tk::real, 4 > > u( ncomp );
-  for (ncomp_t c=0; c<ncomp; ++c) u[c] = U.extract( c, offset, N );
+  auto & u = std::get<2>(res);
+  for (ncomp_t c=0; c<ncomp; ++c) 
+    for (std::size_t j=0; j<4; ++j )
+      u[c][j] = U( c, N[j], offset );
   // apply stagnation BCs
   // WIP: This is commented for now, because egrad() is passed as a
   // std::function() without an object, hence it is static. However,
@@ -139,7 +142,7 @@ new_egrad( ncomp_t ncomp,
     for (std::size_t j=0; j<4; ++j )
       u[4][j] -= 0.5*u[1+d][j]*u[1+d][j];
   // return data needed to scatter add element contribution to gradient
-  res = { std::move(N), std::move(grad), std::move(u), std::move(J) };
+  //res = { std::move(N), std::move(grad), std::move(u), std::move(J) };
 }
 
 tk::Fields
@@ -179,6 +182,10 @@ nodegrad( ncomp_t ncomp,
 
   auto nelem = inpoel.size()/4;
   std::vector<temp_type> elem_res(nelem);
+  for (std::size_t e=0; e<nelem; ++e) {
+    auto & u = std::get<2>(elem_res[e]);
+   u.resize(ncomp);
+  }
 
   // compute gradients of primitive variables in internal points
   #pragma omp simd
@@ -186,7 +193,9 @@ nodegrad( ncomp_t ncomp,
     new_egrad( ncomp, offset, e, coord, inpoel, stag, U, elem_res[e]  );
   }
   //const auto  [N,g,u,J]  = egrad( ncomp, offset, e, coord, inpoel, stag, U );
-  for (const auto & [N,g,u,J] : elem_res) {
+  #pragma omp simd
+  for (std::size_t e=0; e<nelem; ++e) {
+    const auto & [N,g,u,J]  = elem_res[e];
     auto J24 = J/24.0;
     for (std::size_t a=0; a<4; ++a)
       for (std::size_t b=0; b<4; ++b)

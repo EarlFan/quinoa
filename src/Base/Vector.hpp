@@ -25,6 +25,8 @@ flip( std::array< real, 3 >& v ) noexcept;
 //! Compute the cross-product of two vectors
 std::array< real, 3 >
 cross( const std::array< real, 3 >& v1, const std::array< real, 3 >& v2 );
+void cross( const std::array< real, 3 >& v1, const std::array< real, 3 >& v2,
+            std::array< tk::real, 3 > & res );
 
 //! Compute the cross-product of two vectors divided by a scalar
 std::array< real, 3 >
@@ -49,7 +51,7 @@ unit( std::array< real, 3 >& v );
 real
 triple( const std::array< real, 3 >& v1,
         const std::array< real, 3 >& v2,
-        const std::array< real, 3 >& v3 );
+        const std::array< real, 3 >& v3 ) noexcept;
 
 //! Rotate vector about X axis
 std::array< real, 3 >
